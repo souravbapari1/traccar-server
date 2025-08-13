@@ -30,6 +30,7 @@ import org.traccar.model.DeviceAccumulators;
 import org.traccar.model.Permission;
 import org.traccar.model.Position;
 import org.traccar.model.User;
+import org.traccar.reports.SummaryReportProvider;
 import org.traccar.session.ConnectionManager;
 import org.traccar.session.cache.CacheManager;
 import org.traccar.storage.StorageException;
@@ -78,9 +79,6 @@ public class DeviceResource extends BaseObjectResource<Device> {
     private ConnectionManager connectionManager;
 
     @Inject
-    private BroadcastService broadcastService;
-
-    @Inject
     private MediaManager mediaManager;
 
     @Inject
@@ -88,6 +86,9 @@ public class DeviceResource extends BaseObjectResource<Device> {
 
     @Inject
     private LogAction actionLogger;
+
+    @Inject
+    private SummaryReportProvider summaryReportProvider;
 
     @Context
     private HttpServletRequest request;
@@ -98,7 +99,8 @@ public class DeviceResource extends BaseObjectResource<Device> {
 
     @GET
     public Collection<Device> get(
-            @QueryParam("all") boolean all, @QueryParam("userId") long userId,
+            @QueryParam("all") boolean all, @QueryParam("lastPosition") boolean lastPosition,
+            @QueryParam("userId") long userId,
             @QueryParam("uniqueId") List<String> uniqueIds,
             @QueryParam("id") List<Long> deviceIds) throws StorageException {
 
@@ -110,8 +112,10 @@ public class DeviceResource extends BaseObjectResource<Device> {
                         new Columns.All(),
                         new Condition.And(
                                 new Condition.Equals("uniqueId", uniqueId),
-                                new Condition.Permission(User.class, getUserId(), Device.class)))));
+                                new Condition.Permission(User.class, getUserId(),
+                                        Device.class)))));
             }
+
             for (Long deviceId : deviceIds) {
                 result.addAll(storage.getObjects(Device.class, new Request(
                         new Columns.All(),
@@ -119,6 +123,25 @@ public class DeviceResource extends BaseObjectResource<Device> {
                                 new Condition.Equals("id", deviceId),
                                 new Condition.Permission(User.class, getUserId(), Device.class)))));
             }
+
+            if (lastPosition) {
+                for (Device device : result) {
+                    try {
+                        Position position = storage.getObject(Position.class,
+                                new Request(new Columns.All(), new Condition.LatestPositions(device.getId())));
+
+                        if (position != null) {
+                            String currentStatus = summaryReportProvider.deviceCurrentStatus(position);
+                            position.getAttributes().put("currentStatus", currentStatus);
+                        }
+
+                        device.setLastPosition(position); // position can be null if no positions exist for device
+                    } catch (StorageException e) {
+                        // Log the error but continue processing other devices
+                    }
+                }
+            }
+
             return result;
 
         } else {
@@ -138,8 +161,26 @@ public class DeviceResource extends BaseObjectResource<Device> {
                 }
             }
 
-            return storage.getObjects(baseClass, new Request(
-                    new Columns.All(), Condition.merge(conditions), new Order("name")));
+            Collection<Device> devices = storage.getObjects(baseClass,
+                    new Request(new Columns.All(), Condition.merge(conditions), new Order("name")));
+
+            if (lastPosition) {
+                for (Device device : devices) {
+                    try {
+                        Position position = storage.getObject(Position.class,
+                                new Request(new Columns.All(), new Condition.LatestPositions(device.getId())));
+                        if (position != null) {
+                            String currentStatus = summaryReportProvider.deviceCurrentStatus(position);
+                            position.getAttributes().put("currentStatus", currentStatus);
+                        }
+                        device.setLastPosition(position); // position can be null if no positions exist for device
+                    } catch (StorageException e) {
+                        // Log the error but continue processing other devices
+                    }
+                }
+            }
+
+            return devices;
 
         }
     }

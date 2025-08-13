@@ -2,7 +2,36 @@
  * Copyright 2015 - 2024 Anton Tananaev (anton@traccar.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * you may not use this file except in com        Map<String, Object> report = summaryReportProvider.getLast24HDeviceReport(deviceId);
+
+        final Device finalDevice = device;
+        final Position finalPosition = position;
+        final Map<String, Object> finalReport = report;
+
+        // Extract original summary for backward compatibility
+        SummaryReportItem originalSummary = null;
+        double offHours = 0.0;
+        
+        if (report != null && report.get("originalSummary") != null) {
+            originalSummary = (SummaryReportItem) report.get("originalSummary");
+            
+            long totalMillis = Duration.between(originalSummary.getStartTime().toInstant(), originalSummary.getEndTime().toInstant()).toMillis();
+            // Calculate OFF hours in milliseconds
+            long offMillis = totalMillis - originalSummary.getEngineHours();
+            // Convert milliseconds to hours (decimal)
+            offHours = offMillis / (1000.0 * 60 * 60);
+        }
+
+        final SummaryReportItem finalOriginalSummary = originalSummary;
+        final double finalOffHours = offHours;
+
+        return Response.ok(new Object() {
+            public final Device device = finalDevice;
+            public final Position position = finalPosition;
+            public final Map<String, Object> enhancedReport = finalReport; // Full enhanced report
+            public final SummaryReportItem summary = finalOriginalSummary; // Original summary for backward compatibility
+            public final double engineOffHours = finalOffHours;
+        }).build();ense.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -29,7 +58,10 @@ import org.traccar.helper.model.UserUtil;
 import org.traccar.model.Device;
 import org.traccar.model.ManagedUser;
 import org.traccar.model.Permission;
+import org.traccar.model.Position;
 import org.traccar.model.User;
+import org.traccar.reports.SummaryReportProvider;
+import org.traccar.reports.model.SummaryReportItem;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
@@ -46,8 +78,13 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
+import java.time.Duration;
 import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 
 @Path("users")
 @Produces(MediaType.APPLICATION_JSON)
@@ -63,13 +100,16 @@ public class UserResource extends BaseObjectResource<User> {
     @Context
     private HttpServletRequest request;
 
+    @Inject
+    private SummaryReportProvider summaryReportProvider;
+
     public UserResource() {
         super(User.class);
     }
 
     @GET
-    public Collection<User> get(
-            @QueryParam("userId") long userId, @QueryParam("deviceId") long deviceId) throws StorageException {
+    public Collection<User> get(@QueryParam("userId") long userId, @QueryParam("deviceId") long deviceId)
+            throws StorageException {
         var conditions = new LinkedList<Condition>();
         if (userId > 0) {
             permissionsService.checkUser(getUserId(), userId);
@@ -149,6 +189,113 @@ public class UserResource extends BaseObjectResource<User> {
             throw new SecurityException("One-time password is disabled");
         }
         return new GoogleAuthenticator().createCredentials().getKey();
+    }
+
+    @Path("{id}/device/{deviceId}")
+    @GET
+    public Response getUserDevice(@PathParam("id") long userId, @PathParam("deviceId") long deviceId) throws Exception {
+        permissionsService.checkUser(getUserId(), userId);
+
+        Device device = storage.getObject(Device.class, new Request(
+                new Columns.All(),
+                new Condition.And(
+                        new Condition.Equals("id", deviceId),
+                        new Condition.Permission(User.class, userId, Device.class))));
+
+        Request positionRequest = new Request(new Columns.All(), new Condition.Equals("id", device.getPositionId()));
+        Position position = storage.getObject(Position.class, positionRequest);
+
+        if (position != null) {
+            String currentStatus = summaryReportProvider.deviceCurrentStatus(position);
+            position.getAttributes().put("currentStatus", currentStatus);
+        }
+
+        Map<String, Object> report = summaryReportProvider.getLast24HDeviceReport(deviceId, position);
+
+        final Device finalDevice = device;
+        final Position finalPosition = position;
+        final Map<String, Object> finalReport = report;
+
+        // Extract original summary for calculations
+        double offHours = 0.0;
+        if (report != null && report.get("originalSummary") != null) {
+            SummaryReportItem originalSummary = (SummaryReportItem) report.get("originalSummary");
+
+            long totalMillis = Duration
+                    .between(originalSummary.getStartTime().toInstant(), originalSummary.getEndTime().toInstant())
+                    .toMillis();
+            // Calculate OFF hours in milliseconds
+            long offMillis = totalMillis - originalSummary.getEngineHours();
+            // Convert milliseconds to hours (decimal)
+            offHours = offMillis / (1000.0 * 60 * 60);
+        }
+
+        final double finalOffHours = offHours;
+
+        return Response.ok(new Object() {
+            public final Device device = finalDevice;
+            public final Position position = finalPosition;
+            public final Map<String, Object> summary = finalReport;
+            public final double engineOffHours = finalOffHours;
+        }).build();
+
+    }
+
+    @Path("{id}/devices")
+    @GET
+    public Response getUserDevices(@PathParam("id") long userId) throws Exception {
+        permissionsService.checkUser(getUserId(), userId);
+
+        // Get all devices for the user
+        Collection<Device> devices = storage.getObjects(Device.class, new Request(
+                new Columns.All(),
+                new Condition.Permission(User.class, userId, Device.class)));
+
+        // Create response with devices and their positions/summaries
+        var deviceResponses = devices.stream().map(device -> {
+            try {
+                Position position = null;
+                if (device.getPositionId() != 0) {
+                    Request positionRequest = new Request(new Columns.All(), 
+                            new Condition.Equals("id", device.getPositionId()));
+                    position = storage.getObject(Position.class, positionRequest);
+                    
+                    if (position != null) {
+                        String currentStatus = summaryReportProvider.deviceCurrentStatus(position);
+                        position.getAttributes().put("currentStatus", currentStatus);
+                    }
+                }
+
+                Map<String, Object> report = summaryReportProvider.getLast24HDeviceReport(device.getId(), position);
+
+                // Calculate engine off hours
+                double offHours = 0.0;
+                if (report != null && report.get("originalSummary") != null) {
+                    SummaryReportItem originalSummary = (SummaryReportItem) report.get("originalSummary");
+                    long totalMillis = Duration
+                            .between(originalSummary.getStartTime().toInstant(), originalSummary.getEndTime().toInstant())
+                            .toMillis();
+                    long offMillis = totalMillis - originalSummary.getEngineHours();
+                    offHours = offMillis / (1000.0 * 60 * 60);
+                }
+
+                final Device finalDevice = device;
+                final Position finalPosition = position;
+                final Map<String, Object> finalReport = report;
+                final double finalOffHours = offHours;
+
+                return new Object() {
+                    public final Device device = finalDevice;
+                    public final Position position = finalPosition;
+                    public final Map<String, Object> summary = finalReport;
+                    public final double engineOffHours = finalOffHours;
+                };
+            } catch (StorageException e) {
+                throw new RuntimeException(e);
+            }
+        }).toList();
+
+        return Response.ok(deviceResponses).build();
     }
 
 }

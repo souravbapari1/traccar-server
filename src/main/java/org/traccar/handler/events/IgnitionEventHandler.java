@@ -16,20 +16,31 @@
  */
 package org.traccar.handler.events;
 
-import jakarta.inject.Inject;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.traccar.config.Config;
+import org.traccar.config.Keys;
 import org.traccar.helper.model.PositionUtil;
 import org.traccar.model.Device;
 import org.traccar.model.Event;
 import org.traccar.model.Position;
 import org.traccar.session.cache.CacheManager;
 
+import jakarta.inject.Inject;
+
 public class IgnitionEventHandler extends BaseEventHandler {
 
     private final CacheManager cacheManager;
+    private final long debounceTime;
+    
+    // Track last ignition event times per device to implement debouncing
+    private final ConcurrentHashMap<Long, Long> lastIgnitionEventTime = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, Boolean> lastIgnitionState = new ConcurrentHashMap<>();
 
     @Inject
-    public IgnitionEventHandler(CacheManager cacheManager) {
+    public IgnitionEventHandler(Config config, CacheManager cacheManager) {
         this.cacheManager = cacheManager;
+        this.debounceTime = config.getLong(Keys.EVENT_IGNITION_DEBOUNCE_TIME);
     }
 
     @Override
@@ -39,17 +50,60 @@ public class IgnitionEventHandler extends BaseEventHandler {
             return;
         }
 
+
+        
+
+
         if (position.hasAttribute(Position.KEY_IGNITION)) {
             boolean ignition = position.getBoolean(Position.KEY_IGNITION);
+            long deviceId = position.getDeviceId();
+            long currentTime = position.getFixTime().getTime();
 
-            Position lastPosition = cacheManager.getPosition(position.getDeviceId());
+            Position lastPosition = cacheManager.getPosition(deviceId);
             if (lastPosition != null && lastPosition.hasAttribute(Position.KEY_IGNITION)) {
                 boolean oldIgnition = lastPosition.getBoolean(Position.KEY_IGNITION);
 
-                if (ignition && !oldIgnition) {
-                    callback.eventDetected(new Event(Event.TYPE_IGNITION_ON, position));
-                } else if (!ignition && oldIgnition) {
-                    callback.eventDetected(new Event(Event.TYPE_IGNITION_OFF, position));
+                // Check if ignition state has changed
+                if (ignition != oldIgnition) {
+                    // Get the last event time and state for this device
+                    Long lastEventTime = lastIgnitionEventTime.get(deviceId);
+                    Boolean lastEventState = lastIgnitionState.get(deviceId);
+                    
+                    boolean shouldGenerateEvent = true;
+                    
+                    // Apply debouncing logic
+                    if (lastEventTime != null && lastEventState != null) {
+                        long timeSinceLastEvent = currentTime - lastEventTime;
+                        
+                        // If not enough time has passed since last event, check if we should suppress
+                        if (timeSinceLastEvent < debounceTime) {
+                            // Suppress event if it's the same state as the last generated event
+                            // or if it's rapidly switching back and forth
+                            if (ignition == lastEventState) {
+                                shouldGenerateEvent = false;
+                            }
+                        }
+                    }
+                    
+                    if (shouldGenerateEvent) {
+                        // Update tracking data
+                        lastIgnitionEventTime.put(deviceId, currentTime);
+                        lastIgnitionState.put(deviceId, ignition);
+                        
+                        // Generate the appropriate event
+                        if (ignition) {
+                            callback.eventDetected(new Event(Event.TYPE_IGNITION_ON, position));
+                        } else {
+                            callback.eventDetected(new Event(Event.TYPE_IGNITION_OFF, position));
+                        }
+                    }
+                } else {
+                    // No state change - update timestamp but keep same state
+                    // This helps with debouncing by extending the time window
+                    Boolean lastEventState = lastIgnitionState.get(deviceId);
+                    if (lastEventState != null && lastEventState == ignition) {
+                        lastIgnitionEventTime.put(deviceId, currentTime);
+                    }
                 }
             }
         }

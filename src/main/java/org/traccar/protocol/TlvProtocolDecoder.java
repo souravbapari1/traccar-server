@@ -89,7 +89,8 @@ public class TlvProtocolDecoder extends BaseProtocolDecoder {
             position.setCourse(Double.parseDouble(readArgument(buf)));
 
             position.set(Position.KEY_SATELLITES, Integer.parseInt(readArgument(buf)));
-
+            // position.set(Position.KEY_HDOP, Double.parseDouble(readArgument(buf)));
+            System.out.println( position.getAttributes());
             return position;
 
         }

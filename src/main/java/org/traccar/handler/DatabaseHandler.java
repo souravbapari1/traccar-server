@@ -15,7 +15,6 @@
  */
 package org.traccar.handler;
 
-import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.traccar.database.StatisticsManager;
@@ -23,6 +22,8 @@ import org.traccar.model.Position;
 import org.traccar.storage.Storage;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Request;
+
+import jakarta.inject.Inject;
 
 public class DatabaseHandler extends BasePositionHandler {
 

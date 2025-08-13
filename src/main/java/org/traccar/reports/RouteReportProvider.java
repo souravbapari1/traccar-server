@@ -44,6 +44,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
 
 public class RouteReportProvider {
 
@@ -52,6 +53,9 @@ public class RouteReportProvider {
     private final Storage storage;
 
     private final Map<String, Integer> namesCount = new HashMap<>();
+
+    @Inject
+    private SummaryReportProvider summaryReportProvider;
 
     @Inject
     public RouteReportProvider(Config config, ReportUtils reportUtils, Storage storage) {
@@ -65,12 +69,35 @@ public class RouteReportProvider {
         reportUtils.checkPeriodLimit(from, to);
 
         ArrayList<Position> result = new ArrayList<>();
-        for (Device device: DeviceUtil.getAccessibleDevices(storage, userId, deviceIds, groupIds)) {
+        for (Device device : DeviceUtil.getAccessibleDevices(storage, userId, deviceIds, groupIds)) {
             result.addAll(PositionUtil.getPositions(storage, device.getId(), from, to));
         }
+
+        for (Position pos : result) {
+            String currentStatus = summaryReportProvider.deviceCurrentStatus(pos);
+            pos.getAttributes().put("currentStatus", currentStatus);
+        }
+
         return result;
     }
 
+    public Collection<Position> getDevicePostitionPlayback(long userId, Collection<Long> deviceIds,
+            Collection<Long> groupIds,
+            Date from, Date to) throws StorageException {
+        reportUtils.checkPeriodLimit(from, to);
+
+        ArrayList<Position> result = new ArrayList<>();
+        for (Device device : DeviceUtil.getAccessibleDevices(storage, userId, deviceIds, groupIds)) {
+            List<Position> positions = PositionUtil.getPositions(storage, device.getId(), from, to);
+
+            for (Position pos : positions) {
+                summaryReportProvider.getDeviceReportForDateRange(device.getId(), pos, from, pos.getServerTime());
+            }
+
+            return positions;
+        }
+        return result;
+    }
 
     private String getUniqueSheetName(String key) {
         namesCount.compute(key, (k, value) -> value == null ? 1 : (value + 1));
@@ -84,7 +111,7 @@ public class RouteReportProvider {
 
         ArrayList<DeviceReportSection> devicesRoutes = new ArrayList<>();
         ArrayList<String> sheetNames = new ArrayList<>();
-        for (Device device: DeviceUtil.getAccessibleDevices(storage, userId, deviceIds, groupIds)) {
+        for (Device device : DeviceUtil.getAccessibleDevices(storage, userId, deviceIds, groupIds)) {
             var positions = PositionUtil.getPositions(storage, device.getId(), from, to);
             DeviceReportSection deviceRoutes = new DeviceReportSection();
             deviceRoutes.setDeviceName(device.getName());

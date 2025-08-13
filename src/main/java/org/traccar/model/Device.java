@@ -59,9 +59,22 @@ public class Device extends GroupedModel implements Disableable, Schedulable {
         this.uniqueId = uniqueId.trim();
     }
 
+    private Position lastPosition;
+
+    public Position getLastPosition() {
+        return lastPosition;
+    }
+
+    public void setLastPosition(Position lastPosition) {
+        this.lastPosition = lastPosition;
+    }
+
     public static final String STATUS_UNKNOWN = "unknown";
     public static final String STATUS_ONLINE = "online";
     public static final String STATUS_OFFLINE = "offline";
+    public static final String STATUS_IDLE = "idle";
+    public static final String STATUS_RUNNING = "running";
+    public static final String STATUS_STOPPED = "stopped";
 
     private String status;
 
@@ -134,6 +147,16 @@ public class Device extends GroupedModel implements Disableable, Schedulable {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    private boolean parkingMode;
+
+    public boolean getParkingMode() {
+        return parkingMode;
+    }
+
+    public void setParkingMode(boolean parkingMode) {
+        this.parkingMode = parkingMode;
     }
 
     private boolean disabled;

@@ -2,10 +2,23 @@
 <!DOCTYPE properties SYSTEM 'http://java.sun.com/dtd/properties.dtd'>
 <properties>
 
+    <entry key='server.timezone'>Asia/Kolkata</entry>
+    <entry key='processing.copyAttributes.enable'>true</entry>
+    <entry key='processing.copyAttributes'>batteryLevel,charge,rssi,blocked,sat</entry>
+
     <entry key='web.path'>./traccar-web/simple</entry>
     <entry key='web.localizationPath'>./traccar-web/src/resources/l10n</entry>
     <entry key='web.debug'>true</entry>
     <entry key='web.console'>true</entry>
+
+    <entry key='event.forward.header'>content-type: application/json</entry>
+    <entry key='forward.json'>true</entry>
+    <entry key='event.forward.url'>http://93.127.172.209:4040/traccar/event</entry>
+
+    <entry key='forward.enable'>true</entry>
+    <entry key='forward.type'>json</entry>
+    <entry key='forward.url'>http://93.127.172.209:4040/traccar</entry>
+
 
     <entry key='geocoder.type'>pluscodes</entry>
 
@@ -22,6 +35,11 @@
     <entry key='database.user'>sa</entry>
     <entry key='database.password'></entry>
 
+    <!-- Position Filtering -->
+    <entry key='filter.invalid'>true</entry>
+    <entry key='filter.zero'>true</entry>
+    <entry key='filter.duplicate'>true</entry>
+    
     <!--<entry key='server.instantAcknowledgement'>true</entry>
     <entry key='server.buffering.threshold'>5000</entry>-->
 

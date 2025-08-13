@@ -82,6 +82,9 @@ public class ConnectionManager implements BroadcastInterface {
     private final Map<Long, Set<Long>> deviceUsers = new HashMap<>();
 
     private final Map<Long, Timeout> timeouts = new ConcurrentHashMap<>();
+    private final Map<Long, String> lastStatusChange = new ConcurrentHashMap<>();
+    private final Map<Long, Long> lastStatusChangeTime = new ConcurrentHashMap<>();
+    private final long statusDebounceTime;
 
     @Inject
     public ConnectionManager(
@@ -96,6 +99,7 @@ public class ConnectionManager implements BroadcastInterface {
         this.broadcastService = broadcastService;
         this.deviceLookupService = deviceLookupService;
         deviceTimeout = config.getLong(Keys.STATUS_TIMEOUT);
+        statusDebounceTime = config.getLong(Keys.STATUS_DEBOUNCE_TIME);
         showUnknownDevices = config.getBoolean(Keys.WEB_SHOW_UNKNOWN_DEVICES);
         broadcastService.registerListener(this);
     }
@@ -219,6 +223,10 @@ public class ConnectionManager implements BroadcastInterface {
                 sessions.remove(deviceSession.getUniqueId());
                 return sessions.isEmpty() ? null : sessions;
             });
+            
+            // Clean up debouncing tracking maps to prevent memory leaks
+            lastStatusChange.remove(deviceId);
+            lastStatusChangeTime.remove(deviceId);
         }
     }
 
@@ -239,7 +247,25 @@ public class ConnectionManager implements BroadcastInterface {
         String oldStatus = device.getStatus();
         device.setStatus(status);
 
-        if (!status.equals(oldStatus)) {
+        // Implement debouncing to prevent frequent online/offline events
+        long currentTime = System.currentTimeMillis();
+        String lastStatus = lastStatusChange.get(deviceId);
+        Long lastChangeTime = lastStatusChangeTime.get(deviceId);
+        
+        boolean shouldTriggerEvent = !status.equals(oldStatus);
+        
+        // Apply debouncing logic: only trigger event if enough time has passed since last status change
+        // or if this is the first status change or if status is changing to a different state than the last logged one
+        if (shouldTriggerEvent && lastChangeTime != null && lastStatus != null) {
+            long timeSinceLastChange = currentTime - lastChangeTime;
+            if (timeSinceLastChange < statusDebounceTime && status.equals(lastStatus)) {
+                shouldTriggerEvent = false;
+                LOGGER.debug("Debouncing status change for device {} from {} to {} (time since last: {}ms)", 
+                    deviceId, oldStatus, status, timeSinceLastChange);
+            }
+        }
+
+        if (shouldTriggerEvent) {
             String eventType;
             Map<Event, Position> events = new HashMap<>();
             eventType = switch (status) {
@@ -249,6 +275,10 @@ public class ConnectionManager implements BroadcastInterface {
             };
             events.put(new Event(eventType, deviceId), null);
             notificationManager.updateEvents(events);
+            
+            // Update debouncing tracking
+            lastStatusChange.put(deviceId, status);
+            lastStatusChangeTime.put(deviceId, currentTime);
         }
 
         if (time != null) {

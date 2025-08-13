@@ -442,6 +442,15 @@ public final class Keys {
             0.01);
 
     /**
+     * Ignition event debounce time in milliseconds. Prevents rapid ignition on/off events from generating
+     * multiple notifications. Default value is 5 seconds (5000ms).
+     */
+    public static final ConfigKey<Long> EVENT_IGNITION_DEBOUNCE_TIME = new LongConfigKey(
+            "event.ignition.debounceTime",
+            List.of(KeyType.CONFIG, KeyType.DEVICE),
+            5000L);
+
+    /**
      * Enable in-memory database instead of an SQL database.
      */
     public static final ConfigKey<Boolean> DATABASE_MEMORY = new BooleanConfigKey(
@@ -756,6 +765,15 @@ public final class Keys {
     public static final ConfigKey<String> STATUS_IGNORE_OFFLINE = new StringConfigKey(
             "status.ignoreOffline",
             List.of(KeyType.CONFIG));
+
+    /**
+     * Status change debounce time in milliseconds. Prevents rapid online/offline status changes from generating
+     * too many events. Default is 30 seconds.
+     */
+    public static final ConfigKey<Long> STATUS_DEBOUNCE_TIME = new LongConfigKey(
+            "status.debounceTime",
+            List.of(KeyType.CONFIG),
+            30000L);
 
     /**
      * Path to the media folder. Server stores audio, video and photo files in that folder. Sub-folders will be

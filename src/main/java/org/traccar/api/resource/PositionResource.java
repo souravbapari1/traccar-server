@@ -23,6 +23,7 @@ import org.traccar.model.UserRestrictions;
 import org.traccar.reports.CsvExportProvider;
 import org.traccar.reports.GpxExportProvider;
 import org.traccar.reports.KmlExportProvider;
+import org.traccar.reports.SummaryReportProvider;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
@@ -61,6 +62,9 @@ public class PositionResource extends BaseResource {
     @Inject
     private GpxExportProvider gpxExportProvider;
 
+    @Inject
+    private SummaryReportProvider summaryReportProvider;
+
     @GET
     public Stream<Position> getJson(
             @QueryParam("deviceId") long deviceId, @QueryParam("id") List<Long> positionIds,
@@ -72,6 +76,8 @@ public class PositionResource extends BaseResource {
                 Position position = storage.getObject(Position.class, new Request(
                         new Columns.All(), new Condition.Equals("id", positionId)));
                 permissionsService.checkPermission(Device.class, getUserId(), position.getDeviceId());
+                String currentStatus = summaryReportProvider.deviceCurrentStatus(position);
+                position.getAttributes().put("currentStatus", currentStatus);
                 positions.add(position);
             }
             return positions.stream();
@@ -99,7 +105,8 @@ public class PositionResource extends BaseResource {
         if (position == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-
+        String currentStatus = summaryReportProvider.deviceCurrentStatus(position);
+        position.getAttributes().put("currentStatus", currentStatus);
         permissionsService.checkPermission(Device.class, getUserId(), position.getDeviceId());
 
         storage.removeObject(Position.class, request);

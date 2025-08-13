@@ -19,6 +19,7 @@ import org.traccar.model.BaseModel;
 import org.traccar.model.Device;
 import org.traccar.model.Position;
 import org.traccar.model.User;
+import org.traccar.reports.SummaryReportProvider;
 import org.traccar.session.cache.CacheManager;
 import org.traccar.storage.Storage;
 import org.traccar.storage.StorageException;
@@ -69,17 +70,28 @@ public final class PositionUtil {
                 new Condition.And(
                         new Condition.Equals("deviceId", deviceId),
                         new Condition.Between("fixTime", from, to)),
-                new Order("fixTime")));
+                new Order("fixTime"))).map(p -> {
+                    SummaryReportProvider summaryReportProvider = new SummaryReportProvider(null, null, null, storage);
+                    // Update current status in position attributes
+                    String currentStatus = summaryReportProvider.deviceCurrentStatus(p);
+                    p.getAttributes().put("currentStatus", currentStatus);
+                    return p;
+                });
     }
 
     public static Position getEdgePosition(
             Storage storage, long deviceId, Date from, Date to, boolean end) throws StorageException {
-        return storage.getObject(Position.class, new Request(
+        List<Position> positions = storage.getObjects(Position.class, new Request(
                 new Columns.All(),
                 new Condition.And(
                         new Condition.Equals("deviceId", deviceId),
                         new Condition.Between("fixTime", from, to)),
                 new Order("fixTime", end, 1)));
+
+        if (positions != null && positions.get(0).hasAttribute("hours")) {
+            return positions.get(0);
+        }
+        return positions != null && !positions.isEmpty() ? positions.get(0) : null;
     }
 
     public static List<Position> getLatestPositions(Storage storage, long userId) throws StorageException {
@@ -91,8 +103,12 @@ public final class PositionUtil {
         var positions = storage.getObjects(Position.class, new Request(
                 new Columns.All(), new Condition.LatestPositions()));
         return positions.stream()
-                .filter(position -> deviceIds.contains(position.getDeviceId()))
-                .toList();
+                .filter(position -> deviceIds.contains(position.getDeviceId())).map(p -> {
+                    SummaryReportProvider summaryReportProvider = new SummaryReportProvider(null, null, null, storage);
+                    String currentStatus = summaryReportProvider.deviceCurrentStatus(p);
+                    p.getAttributes().put("currentStatus", currentStatus);
+                    return p;
+                }).toList();
     }
 
 }
