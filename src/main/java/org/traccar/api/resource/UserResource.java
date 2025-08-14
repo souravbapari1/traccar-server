@@ -80,10 +80,11 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 @Path("users")
@@ -238,7 +239,69 @@ public class UserResource extends BaseObjectResource<User> {
             public final Map<String, Object> summary = finalReport;
             public final double engineOffHours = finalOffHours;
         }).build();
+    }
 
+    @GET
+    @Path("devices")
+    public Response getDevices(
+            @QueryParam("all") boolean all,
+            @QueryParam("userId") long userId,
+            @QueryParam("uniqueId") List<String> uniqueIds,
+            @QueryParam("id") List<Long> deviceIds) throws Exception {
+
+        // Handle empty lists properly
+        if (uniqueIds == null) uniqueIds = new ArrayList<>();
+        if (deviceIds == null) deviceIds = new ArrayList<>();
+
+        if (!uniqueIds.isEmpty() || !deviceIds.isEmpty()) {
+
+            Collection<Device> result = new LinkedList<>();
+            for (String uniqueId : uniqueIds) {
+                result.addAll(storage.getObjects(Device.class, new Request(
+                        new Columns.All(),
+                        new Condition.And(
+                                new Condition.Equals("uniqueId", uniqueId),
+                                new Condition.Permission(User.class, getUserId(),
+                                        Device.class)))));
+            }
+
+            for (Long deviceId : deviceIds) {
+                result.addAll(storage.getObjects(Device.class, new Request(
+                        new Columns.All(),
+                        new Condition.And(
+                                new Condition.Equals("id", deviceId),
+                                new Condition.Permission(User.class, getUserId(), Device.class)))));
+            }
+
+            Response response = generateDevicesResponse(result);
+
+            return response;
+
+        } else {
+
+            var conditions = new LinkedList<Condition>();
+
+            if (all) {
+                if (permissionsService.notAdmin(getUserId())) {
+                    conditions.add(new Condition.Permission(User.class, getUserId(), Device.class));
+                }
+            } else {
+                if (userId == 0) {
+                    conditions.add(new Condition.Permission(User.class, getUserId(), Device.class));
+                } else {
+                    permissionsService.checkUser(getUserId(), userId);
+                    conditions.add(new Condition.Permission(User.class, userId, Device.class).excludeGroups());
+                }
+            }
+
+            Collection<Device> devices = storage.getObjects(Device.class,
+                    new Request(new Columns.All(), Condition.merge(conditions), new Order("name")));
+
+            Response response = generateDevicesResponse(devices);
+
+            return response;
+
+        }
     }
 
     @Path("{id}/devices")
@@ -251,51 +314,120 @@ public class UserResource extends BaseObjectResource<User> {
                 new Columns.All(),
                 new Condition.Permission(User.class, userId, Device.class)));
 
-        // Create response with devices and their positions/summaries
-        var deviceResponses = devices.stream().map(device -> {
+        // Generate the response
+        Response response = generateDevicesResponse(devices);
+        return response;
+
+    }
+
+    private Response generateDevicesResponse(Collection<Device> devices) throws Exception {
+        Collection<DeviceResponse> deviceResponses = new ArrayList<>();
+        SummaryCounts counts = new SummaryCounts();
+
+        for (Device device : devices) {
             try {
                 Position position = null;
                 if (device.getPositionId() != 0) {
-                    Request positionRequest = new Request(new Columns.All(), 
+                    Request positionRequest = new Request(new Columns.All(),
                             new Condition.Equals("id", device.getPositionId()));
                     position = storage.getObject(Position.class, positionRequest);
-                    
+
                     if (position != null) {
                         String currentStatus = summaryReportProvider.deviceCurrentStatus(position);
-                        position.getAttributes().put("currentStatus", currentStatus);
+                        if (position.getAttributes() != null) {
+                            position.getAttributes().put("currentStatus", currentStatus);
+                        }
                     }
                 }
 
-                Map<String, Object> report = summaryReportProvider.getLast24HDeviceReport(device.getId(), position);
+                // Check device expiration
+                boolean isDeviceExpired = device.getExpirationTime() != null
+                        && device.getExpirationTime().before(new Date());
+                boolean isDeviceExpiringSoon = false;
 
-                // Calculate engine off hours
-                double offHours = 0.0;
-                if (report != null && report.get("originalSummary") != null) {
-                    SummaryReportItem originalSummary = (SummaryReportItem) report.get("originalSummary");
-                    long totalMillis = Duration
-                            .between(originalSummary.getStartTime().toInstant(), originalSummary.getEndTime().toInstant())
-                            .toMillis();
-                    long offMillis = totalMillis - originalSummary.getEngineHours();
-                    offHours = offMillis / (1000.0 * 60 * 60);
+                if (device.getExpirationTime() != null && !isDeviceExpired) {
+                    // Check if device expires within 7 days
+                    long daysUntilExpiry = (device.getExpirationTime().getTime() - new Date().getTime())
+                            / (1000 * 60 * 60 * 24);
+                    isDeviceExpiringSoon = daysUntilExpiry <= 7;
                 }
 
-                final Device finalDevice = device;
-                final Position finalPosition = position;
-                final Map<String, Object> finalReport = report;
-                final double finalOffHours = offHours;
+                // Count status
+                String status = (position != null && position.getAttributes() != null)
+                        ? (String) position.getAttributes().get("currentStatus")
+                        : null;
 
-                return new Object() {
-                    public final Device device = finalDevice;
-                    public final Position position = finalPosition;
-                    public final Map<String, Object> summary = finalReport;
-                    public final double engineOffHours = finalOffHours;
-                };
+                if (device.getStatus().equals(Device.STATUS_ONLINE)) {
+                    counts.onlineDeviceIds.add(device.getId());
+                } else if (device.getStatus().equals(Device.STATUS_OFFLINE)) {
+                    counts.offlineDeviceIds.add(device.getId());
+                }
+
+                if (status != null) {
+                    switch (status.toLowerCase()) {
+                        case "running" -> {
+                            counts.runningDeviceIds.add(device.getId());
+                        }
+                        case "idle" -> {
+                            counts.idleDeviceIds.add(device.getId());
+                        }
+                        case "stopped" -> {
+                            counts.stoppedDeviceIds.add(device.getId());
+                        }
+                    }
+                }
+
+                // Count expiration status
+                if (isDeviceExpired) {
+                    counts.expiredDeviceIds.add(device.getId());
+                } else if (isDeviceExpiringSoon) {
+                    counts.expiredSoonDeviceIds.add(device.getId());
+                }
+
+                deviceResponses.add(new DeviceResponse(device, position));
+
             } catch (StorageException e) {
-                throw new RuntimeException(e);
+                // Add to offline if there's an error
+                counts.offlineDeviceIds.add(device.getId());
             }
-        }).toList();
+        }
 
-        return Response.ok(deviceResponses).build();
+        ApiResponse response = new ApiResponse(deviceResponses, counts);
+
+        return Response.ok(response).build();
+    }
+
+    // DTO Classes
+    public static class DeviceResponse {
+        public final Device device;
+        public final Position position;
+
+        public DeviceResponse(Device device, Position position) {
+            this.device = device;
+            this.position = position;
+
+        }
+    }
+
+    public static class SummaryCounts {
+        // Device ID lists for each status
+        public List<Long> onlineDeviceIds = new ArrayList<>();
+        public List<Long> offlineDeviceIds = new ArrayList<>();
+        public List<Long> runningDeviceIds = new ArrayList<>();
+        public List<Long> idleDeviceIds = new ArrayList<>();
+        public List<Long> stoppedDeviceIds = new ArrayList<>();
+        public List<Long> expiredDeviceIds = new ArrayList<>();
+        public List<Long> expiredSoonDeviceIds = new ArrayList<>();
+    }
+
+    public static class ApiResponse {
+        public final Collection<DeviceResponse> devices;
+        public final SummaryCounts summary;
+
+        public ApiResponse(Collection<DeviceResponse> devices, SummaryCounts summary) {
+            this.devices = devices;
+            this.summary = summary;
+        }
     }
 
 }

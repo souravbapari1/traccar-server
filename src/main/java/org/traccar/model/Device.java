@@ -59,16 +59,6 @@ public class Device extends GroupedModel implements Disableable, Schedulable {
         this.uniqueId = uniqueId.trim();
     }
 
-    private Position lastPosition;
-
-    public Position getLastPosition() {
-        return lastPosition;
-    }
-
-    public void setLastPosition(Position lastPosition) {
-        this.lastPosition = lastPosition;
-    }
-
     public static final String STATUS_UNKNOWN = "unknown";
     public static final String STATUS_ONLINE = "online";
     public static final String STATUS_OFFLINE = "offline";

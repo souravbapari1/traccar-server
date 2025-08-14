@@ -20,7 +20,6 @@ import jakarta.ws.rs.FormParam;
 import jakarta.ws.rs.core.Context;
 import org.traccar.api.BaseObjectResource;
 import org.traccar.api.signature.TokenManager;
-import org.traccar.broadcast.BroadcastService;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
 import org.traccar.database.MediaManager;
@@ -135,7 +134,7 @@ public class DeviceResource extends BaseObjectResource<Device> {
                             position.getAttributes().put("currentStatus", currentStatus);
                         }
 
-                        device.setLastPosition(position); // position can be null if no positions exist for device
+                        device.getAttributes().put("lastPosition", position);
                     } catch (StorageException e) {
                         // Log the error but continue processing other devices
                     }
@@ -173,7 +172,8 @@ public class DeviceResource extends BaseObjectResource<Device> {
                             String currentStatus = summaryReportProvider.deviceCurrentStatus(position);
                             position.getAttributes().put("currentStatus", currentStatus);
                         }
-                        device.setLastPosition(position); // position can be null if no positions exist for device
+                        device.getAttributes().put("lastPosition", position);
+
                     } catch (StorageException e) {
                         // Log the error but continue processing other devices
                     }
