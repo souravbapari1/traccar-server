@@ -9,14 +9,35 @@
     <entry key='database.user'>sa</entry>
     <entry key='database.password'></entry>
     <!-- Position Filtering -->
-<entry key='filter.enable'>true</entry>
-<entry key='filter.duplicate'>true</entry>
-<entry key='filter.zero'>true</entry>
-<entry key='filter.invalid'>true</entry>
-<entry key='filter.distance'>500</entry>       
-<entry key='filter.maxSpeed'>300</entry>
-<entry key='filter.skipLimit'>10</entry>
-<entry key='processing.copyAttributes.enable'>true</entry>
-<entry key='processing.copyAttributes'>batteryLevel,charge,rssi,blocked,sat</entry>
+    <entry key='filter.enable'>true</entry>
+    <entry key='filter.duplicate'>true</entry>
+    <entry key='filter.zero'>true</entry>
+    <entry key='filter.invalid'>true</entry>
+    <entry key='filter.distance'>500</entry>       
+    <entry key='filter.maxSpeed'>300</entry>
+    <entry key='filter.skipLimit'>10</entry>
+    <entry key='processing.copyAttributes.enable'>true</entry>
+    <entry key='processing.copyAttributes'>batteryLevel,charge,rssi,blocked,sat</entry>
+
+    <entry key='geocoder.enable'>true</entry>
+    <entry key='geocoder.type'>nominatim</entry>
+    <entry key='geocoder.url'>https://eu1.locationiq.com/v1/reverse.php</entry>
+
+    <entry key='notificator.types'>firebase,web,command</entry>
+    <entry key='notificator.firebase.serviceAccount'>
+    {
+        "type": "service_account",
+        "project_id": "evoxo-track",
+        "private_key_id": "e1d07dba71d965497dd54189b0fafaddbfa346bf",
+        "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCjCKEDdXbaqtr1\nkdaA2I6dU2qJ3VuhFVnNwQ8v43OVlREvnpQGGu1HlmdwtDuekkQbvcrCueAvDxlq\nmHgWUoLLpEud8iHmel9/TXO0F8yLPY0JoxmpAfy/49K73suEUD9rZ+km3H0MLDaC\n5ATAGpcIY8DkwcCa6GhzXayBCex/G98NaATVo8+yItARdAT5C1EFvMn8O/HP38QS\n+F2LuoFBl9KBAsaFrzvz+OjJgwGpfmGlXfPtyO3Czl43az8ScqWqWGJqkXhePOyn\nGJyZrLYkcYHAtEIo0ZASwfdX2DazC23xBLS/R6PpjIvfqNiX5Kh9cvUo3Ayb6nTw\nBjop7Lv7AgMBAAECggEAGzM3WdJhL/5NZacdOIXo1UqzfajWvrtHLlLFa+HwyMYE\nBgPZAmO/rq/jNiR7xer1PgOeLnrAcll8jhI+BsthUwRoMUPScBd+k0iiwystTxXH\n0BHMGCxitMkXwYxcPAj/a7X8aiVjH4LI3XGZcUt+Y0HxTrkcnzujIYxBWY4ETPhf\nLwcys5Gi/VWp75tIeSLiZc8AsFpKtnCtmo2SVCHmn4DAZq2eZZ8nLATSCWkVrKgo\nRVaDy4QgUjtEcVz3eLleOcyfHyHKF63oIm7poYUW7uaVMbFd5nQ15N7KlxRPSymq\nbUwPrTSHIi/Q2nF3UQ4sgOBf8N5OzCuCMsZGAVuTwQKBgQDW1T8yiy+J1YJnehKl\nkBjJXFI9qRkKpPaf4iWN9cFfZxugurZyySqqLD26PeCcwfOBaxMp+GIhdzWCHckR\nBLwTzls7EPVAW2rNjuxB8FEKcO393wVjtFiif4J636d3FjL4KDv6EzKXnW47RSLe\nKSU08paRrpiWfp8fNQZBA9DCywKBgQDCRlbDtbnADldIZE+fpV5V0n872GGgHWRj\nMLPKiRctVwLek9Gd4WF6Vu0w7Z2jqGymsJql8sf3dfwRs5zSd+VTvXwsFdTBpXLt\nf06tKNl7kFvB35ARFBncvTw4kwA6Q250Z1+svC+LOh1mmx/m/MjHtjObZ/LViRTd\n/RuVIuNVkQKBgDVvczmyLw/coIP2dB7kOZYUNYyKu+TO5V0dVfP6da+yKMgQyQLC\nEK+lM3FYpL6460V8iZa95kKmsRN9Lx7hi5ptkHmfnTD1zBn2+8Lm8HFlZ3zm9SM4\nn3dDugOwD6pqRiE9eLWaAtJ9YQazCpoxp8SEtnjj8aY1NoT/nl+bgFiDAoGAIs91\ntoW2bdpj+122ArYf7CLWl4OTIpyBo2BTpuPfmkkwA2/bLH34+HHg+FZrW6rPJSMZ\n4shY2ldyvj0/yVqgZdvbBw82WyhpKnMYRuC9720Tc+66IsVGSQ5DXyO/87CndwYa\n15m0ry7Pm9YJ5lq/I0Hbh2od0fNJIOm8aoGg2HECgYEAgaRAdnLxBvBiHaGI0n+b\nyJf8XXOIHzzDTrtLCIoNiuASWmNP0+tTWBEWlmtPacGoK+e0rLrGB0s+dcaYT7c3\nDlEtrurI3csmWYaxE2iEMDBfNhgdx7ZJWLvwX7F1ypPB5l3nEdQli8FrKjNo9alr\nD4YsKKZQCuyLw7vaQ+a8U54=\n-----END PRIVATE KEY-----\n",
+        "client_email": "firebase-adminsdk-fbsvc@evoxo-track.iam.gserviceaccount.com",
+        "client_id": "116824924063702630040",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40evoxo-track.iam.gserviceaccount.com",
+        "universe_domain": "googleapis.com"
+    }
+    </entry>
 
 </properties>

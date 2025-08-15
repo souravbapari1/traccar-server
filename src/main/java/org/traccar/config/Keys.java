@@ -451,6 +451,32 @@ public final class Keys {
             5000L);
 
     /**
+     * Enable parking mode monitoring for unauthorized movement detection.
+     */
+    public static final ConfigKey<Boolean> EVENT_PARKING_MODE_ENABLED = new BooleanConfigKey(
+            "event.parkingMode.enabled",
+            List.of(KeyType.CONFIG, KeyType.DEVICE),
+            false);
+
+    /**
+     * Parking mode speed threshold in knots. Movement above this threshold while parked will trigger an alert.
+     * Default value is 0.5 knots.
+     */
+    public static final ConfigKey<Double> EVENT_PARKING_MODE_SPEED_THRESHOLD = new DoubleConfigKey(
+            "event.parkingMode.speedThreshold",
+            List.of(KeyType.CONFIG, KeyType.DEVICE),
+            0.5);
+
+    /**
+     * Parking mode time threshold in milliseconds. Movement detection within this time after being parked
+     * will trigger an alert. Default value is 60 seconds (60000ms).
+     */
+    public static final ConfigKey<Long> EVENT_PARKING_MODE_TIME_THRESHOLD = new LongConfigKey(
+            "event.parkingMode.timeThreshold",
+            List.of(KeyType.CONFIG, KeyType.DEVICE),
+            60000L);
+
+    /**
      * Enable in-memory database instead of an SQL database.
      */
     public static final ConfigKey<Boolean> DATABASE_MEMORY = new BooleanConfigKey(

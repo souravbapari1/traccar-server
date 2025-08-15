@@ -1,0 +1,20 @@
+#set($subject = "$device.name: parking alert!")
+#set($message = $event.getString('message'))
+#set($digest = "$device.name parking alert: $message at $dateTool.format('yyyy-MM-dd HH:mm:ss', $event.eventTime, $locale, $timezone)")
+<!DOCTYPE html>
+<html>
+<body>
+Device: $device.name<br>
+Alert: Parking Mode Alert<br>
+#if($message)Details: $message<br>#{end}
+Time: $dateTool.format('yyyy-MM-dd HH:mm:ss', $event.eventTime, $locale, $timezone)<br>
+Point: <a href="$webUrl?eventId=$event.id">#{if}($position.address)$position.address#{else}$position.latitude&deg;, $position.longitude&deg;#{end}</a><br>
+#if($event.get('currentSpeed'))Current Speed: $event.get('currentSpeed') knots<br>#{end}
+#if($event.get('previousSpeed'))Previous Speed: $event.get('previousSpeed') knots<br>#{end}
+#if($event.get('speedDifference'))Speed Difference: $event.get('speedDifference') knots<br>#{end}
+#if($event.get('ignitionChange'))Ignition Changed: Yes<br>#{end}
+#if($event.get('doorChange'))Door Activity: Yes<br>#{end}
+<br>
+<a href="$webUrl/settings/notifications?token=$token">Unsubscribe</a>
+</body>
+</html>

@@ -54,6 +54,7 @@ import org.traccar.handler.events.MaintenanceEventHandler;
 import org.traccar.handler.events.MediaEventHandler;
 import org.traccar.handler.events.MotionEventHandler;
 import org.traccar.handler.events.OverspeedEventHandler;
+import org.traccar.handler.events.ParkingModeEventHandler;
 import org.traccar.handler.network.AcknowledgementHandler;
 import org.traccar.helper.PositionLogger;
 import org.traccar.model.Position;
@@ -110,6 +111,7 @@ public class ProcessingHandler extends ChannelInboundHandlerAdapter implements B
                 EngineHoursHandler.class,
                 DriverHandler.class,
                 CopyAttributesHandler.class,
+                
                 PositionForwardingHandler.class,
                 DatabaseHandler.class)
                 .map((clazz) -> (BasePositionHandler) injector.getInstance(clazz))
@@ -123,6 +125,7 @@ public class ProcessingHandler extends ChannelInboundHandlerAdapter implements B
                 BehaviorEventHandler.class,
                 FuelEventHandler.class,
                 MotionEventHandler.class,
+                ParkingModeEventHandler.class,
                 GeofenceEventHandler.class,
                 AlarmEventHandler.class,
                 IgnitionEventHandler.class,

@@ -81,6 +81,50 @@ public class NotificatorFirebase extends Notificator {
                 FirebaseApp.initializeApp(options, "manager"));
     }
 
+    private String getCustomSoundForEvent(Event event) {
+        if (event == null) {
+            return "default";
+        }
+
+        // Map event types to custom sounds
+        switch (event.getType()) {
+            case Event.TYPE_DEVICE_ONLINE:
+                return "device_online";
+            case Event.TYPE_DEVICE_OFFLINE:
+                return "device_offline";
+            case Event.TYPE_DEVICE_STOPPED:
+                return "device_stopped";
+            case Event.TYPE_DEVICE_MOVING:
+                return "device_moving";
+            case Event.TYPE_DEVICE_OVERSPEED:
+                return "device_overspeed";
+            case Event.TYPE_GEOFENCE_ENTER:
+                return "geofence_enter";
+            case Event.TYPE_GEOFENCE_EXIT:
+                return "geofence_exit";
+            case Event.TYPE_ALARM:
+                return "alarm_critical";
+            case Event.TYPE_IGNITION_ON:
+                return "ignition_on";
+            case Event.TYPE_IGNITION_OFF:
+                return "ignition_off";
+            case Event.TYPE_MAINTENANCE:
+                return "maintenance";
+            case Event.TYPE_DRIVER_CHANGED:
+                return "driver_changed";
+            case Event.TYPE_MEDIA:
+                return "media";
+            case Event.TYPE_PARKING_MODE_ON:
+                return "parking_mode_on";
+            case Event.TYPE_PARKING_MODE_OFF:
+                return "parking_mode_off";
+            case Event.TYPE_PARKING_MODE_ALERT:
+                return "parking_mode_exit";
+            default:
+                return "default";
+        }
+    }
+
     @Override
     public void send(User user, NotificationMessage message, Event event, Position position) throws MessageException {
         if (user.hasAttribute("notificationTokens")) {
@@ -88,21 +132,31 @@ public class NotificatorFirebase extends Notificator {
             List<String> registrationTokens = new ArrayList<>(
                     Arrays.asList(user.getString("notificationTokens").split("[, ]")));
 
+            // Determine sound based on event type
+            System.out.println("Event type: " + (event != null ? event.getType() : "null"));
+            String soundName = getCustomSoundForEvent(event);
+
             var androidConfig = AndroidConfig.builder()
-                    .setNotification(AndroidNotification.builder().setSound("default").build());
+                    .setNotification(AndroidNotification.builder().setSound(soundName).build());
 
             var apnsConfig = ApnsConfig.builder()
-                    .setAps(Aps.builder().setSound("default").build());
+                    .setAps(Aps.builder().setSound(soundName).build());
 
             if (message.priority()) {
                 androidConfig.setPriority(AndroidConfig.Priority.HIGH);
                 apnsConfig.putHeader("apns-priority", "10");
             }
 
+            String body = message.digest();
+
+            if (position != null) {
+                body = body + "\n" + position.getAddress();
+            }
+
             var messageBuilder = MulticastMessage.builder()
                     .setNotification(com.google.firebase.messaging.Notification.builder()
                             .setTitle(message.subject())
-                            .setBody(message.digest())
+                            .setBody(body)
                             .build())
                     .setAndroidConfig(androidConfig.build())
                     .setApnsConfig(apnsConfig.build())
@@ -110,6 +164,15 @@ public class NotificatorFirebase extends Notificator {
 
             if (event != null) {
                 messageBuilder.putData("eventId", String.valueOf(event.getId()));
+                messageBuilder.putData("eventType", event.getType());
+            }
+
+            if (position != null) {
+                messageBuilder.putData("address", position.getAddress());
+                messageBuilder.putData("latitude", String.valueOf(position.getLatitude()));
+                messageBuilder.putData("longitude", String.valueOf(position.getLongitude()));
+                messageBuilder.putData("speed", String.valueOf(position.getSpeed()));
+                messageBuilder.putData("deviceId", String.valueOf(position.getDeviceId()));
             }
 
             try {

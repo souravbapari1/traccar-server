@@ -7,7 +7,7 @@
         logicalFilePath="changelog-6.9.1">
 
 <changeSet id="changelog-6.9.1" author="author">
-    <addColumn tableName="devices">
+    <addColumn tableName="tc_devices">
         <column name="parkingMode" type="BOOLEAN" defaultValueBoolean="false">
             <constraints nullable="false"/>
         </column>

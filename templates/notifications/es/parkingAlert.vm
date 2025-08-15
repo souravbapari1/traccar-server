@@ -1,0 +1,20 @@
+#set($subject = "$device.name: ¡alerta de estacionamiento!")
+#set($message = $event.getString('message'))
+#set($digest = "$device.name alerta de estacionamiento: $message en $dateTool.format('yyyy-MM-dd HH:mm:ss', $event.eventTime, $locale, $timezone)")
+<!DOCTYPE html>
+<html>
+<body>
+Dispositivo: $device.name<br>
+Alerta: Alerta de Modo de Estacionamiento<br>
+#if($message)Detalles: $message<br>#{end}
+Hora: $dateTool.format('yyyy-MM-dd HH:mm:ss', $event.eventTime, $locale, $timezone)<br>
+Punto: <a href="$webUrl?eventId=$event.id">#{if}($position.address)$position.address#{else}$position.latitude&deg;, $position.longitude&deg;#{end}</a><br>
+#if($event.get('currentSpeed'))Velocidad Actual: $event.get('currentSpeed') nudos<br>#{end}
+#if($event.get('previousSpeed'))Velocidad Anterior: $event.get('previousSpeed') nudos<br>#{end}
+#if($event.get('speedDifference'))Diferencia de Velocidad: $event.get('speedDifference') nudos<br>#{end}
+#if($event.get('ignitionChange'))Encendido Cambiado: Sí<br>#{end}
+#if($event.get('doorChange'))Actividad de Puerta: Sí<br>#{end}
+<br>
+<a href="$webUrl/settings/notifications?token=$token">Darse de baja</a>
+</body>
+</html>
