@@ -16,6 +16,22 @@
  */
 package org.traccar.reports;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.jxls.util.JxlsHelper;
 import org.traccar.api.security.PermissionsService;
 import org.traccar.config.Config;
@@ -36,25 +52,8 @@ import org.traccar.storage.Storage;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
-import org.traccar.storage.query.Order;
 import org.traccar.storage.query.Request;
-
 import jakarta.inject.Inject;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class SummaryReportProvider {
 
@@ -560,6 +559,14 @@ public class SummaryReportProvider {
         }
 
         return currentState;
+    }
+
+    public List<StopReportItem> getDeviceStopReports(long deviceId, Date from, Date to) throws StorageException {
+        Device device = storage.getObject(Device.class, new Request(
+                new Columns.All(),
+                new Condition.Equals("id", deviceId)));
+        List<StopReportItem> stopReport = reportUtils.detectTripsAndStops(device, from, to, StopReportItem.class);
+        return stopReport;
     }
 
 }

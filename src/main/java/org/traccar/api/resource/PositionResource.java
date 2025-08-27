@@ -24,6 +24,8 @@ import org.traccar.reports.CsvExportProvider;
 import org.traccar.reports.GpxExportProvider;
 import org.traccar.reports.KmlExportProvider;
 import org.traccar.reports.SummaryReportProvider;
+import org.traccar.reports.model.StopReportItem;
+import org.traccar.reports.model.SummaryReportItem;
 import org.traccar.storage.StorageException;
 import org.traccar.storage.query.Columns;
 import org.traccar.storage.query.Condition;
@@ -66,8 +68,7 @@ public class PositionResource extends BaseResource {
     private SummaryReportProvider summaryReportProvider;
 
     @GET
-    public Stream<Position> getJson(
-            @QueryParam("deviceId") long deviceId, @QueryParam("id") List<Long> positionIds,
+    public Stream<Position> getJson(@QueryParam("deviceId") long deviceId, @QueryParam("id") List<Long> positionIds,
             @QueryParam("from") Date from, @QueryParam("to") Date to)
             throws StorageException {
         if (!positionIds.isEmpty()) {
@@ -93,6 +94,76 @@ public class PositionResource extends BaseResource {
         } else {
             return PositionUtil.getLatestPositions(storage, getUserId()).stream();
         }
+    }
+
+    @Path("replay")
+    @GET
+    public Response getReplay(@QueryParam("deviceId") long deviceId,
+            @QueryParam("from") Date from, @QueryParam("to") Date to)
+            throws StorageException {
+        var result = new java.util.HashMap<String, Object>();
+        List<Position> positions;
+        var summary = new java.util.HashMap<String, Object>();
+        List<StopReportItem> stops = new java.util.ArrayList<>();
+
+        if (deviceId > 0) {
+            permissionsService.checkPermission(Device.class, getUserId(), deviceId);
+            if (from != null && to != null) {
+                permissionsService.checkRestriction(getUserId(), UserRestrictions::getDisableReports);
+                positions = PositionUtil.getPositionsStream(storage, deviceId, from, to).toList();
+                stops = summaryReportProvider.getDeviceStopReports(deviceId, from, to);
+            } else {
+                positions = storage.getObjectsStream(Position.class,
+                        new Request(new Columns.All(), new Condition.LatestPositions(deviceId))).toList();
+            }
+        } else {
+            positions = PositionUtil.getLatestPositions(storage, getUserId());
+        }
+
+        // Remove consecutive positions with same latitude and longitude
+        List<Position> filteredPositions = new ArrayList<>();
+        Position prev = null;
+        for (Position pos : positions) {
+            if (prev == null || pos.getLatitude() != prev.getLatitude() || pos.getLongitude() != prev.getLongitude()) {
+                filteredPositions.add(pos);
+            }
+            prev = pos;
+        }
+
+        // Calculate summary based on filtered positions array
+        double maxSpeed = 0.0;
+        double totalSpeed = 0.0;
+        double totalDistance = 0.0;
+        long totalTimeMillis = 0;
+        int count = filteredPositions.size();
+        prev = null;
+        if (count > 0) {
+            for (Position pos : filteredPositions) {
+                double speed = pos.getSpeed();
+                if (speed > maxSpeed) {
+                    maxSpeed = speed;
+                }
+                totalSpeed += speed;
+                if (prev != null) {
+                    double distance = PositionUtil.calculateDistance(prev, pos, false);
+                    totalDistance += distance;
+                    totalTimeMillis += pos.getFixTime().getTime() - prev.getFixTime().getTime();
+                }
+                prev = pos;
+            }
+        }
+        double avgSpeed = count > 0 ? totalSpeed / count : 0.0;
+        double hours = totalTimeMillis / (1000.0 * 60 * 60);
+
+        summary.put("maxSpeed", maxSpeed);
+        summary.put("avgSpeed", avgSpeed);
+        summary.put("distance", totalDistance);
+        summary.put("hours", hours);
+
+        result.put("positions", filteredPositions);
+        result.put("summary", summary);
+        result.put("stops", stops);
+        return Response.ok(result).build();
     }
 
     @Path("{id}")

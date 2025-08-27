@@ -132,7 +132,7 @@ messages = {
 }
 
 baseUrl = 'http://localhost:8082'
-user = { 'email' : 'admin', 'password' : 'admin' }
+user = { 'email' : 'sourav', 'password' : 'sourav' }
 
 debug = '-v' in sys.argv
 

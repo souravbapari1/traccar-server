@@ -41,6 +41,7 @@ public class NominatimGeocoder extends JsonGeocoder {
 
     @Override
     public Address parseAddress(JsonObject json) {
+
         JsonObject result = json.getJsonObject("address");
 
         if (result != null) {
@@ -48,6 +49,8 @@ public class NominatimGeocoder extends JsonGeocoder {
 
             if (json.containsKey("display_name")) {
                 address.setFormattedAddress(json.getString("display_name"));
+                address.setCountry(json.getString("display_name"));
+                return address;
             }
 
             if (result.containsKey("house_number")) {

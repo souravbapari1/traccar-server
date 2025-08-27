@@ -86,40 +86,33 @@ public class NotificatorFirebase extends Notificator {
             return "default";
         }
 
+        if (event.getAttributes() != null && event.getAttributes().get("alarm") != null) {
+            String alarmSound = event.getAttributes().get("alarm").toString();
+            if (!alarmSound.isEmpty()) {
+                return alarmSound;
+            }
+        }
+
         // Map event types to custom sounds
         switch (event.getType()) {
             case Event.TYPE_DEVICE_ONLINE:
-                return "device_online";
+                return "deviceonline";
             case Event.TYPE_DEVICE_OFFLINE:
-                return "device_offline";
-            case Event.TYPE_DEVICE_STOPPED:
-                return "device_stopped";
-            case Event.TYPE_DEVICE_MOVING:
-                return "device_moving";
+                return "deviceoffline";
             case Event.TYPE_DEVICE_OVERSPEED:
-                return "device_overspeed";
+                return "deviceoverspeed";
             case Event.TYPE_GEOFENCE_ENTER:
-                return "geofence_enter";
+                return "geofenceenter";
             case Event.TYPE_GEOFENCE_EXIT:
-                return "geofence_exit";
-            case Event.TYPE_ALARM:
-                return "alarm_critical";
+                return "geofenceexit";
             case Event.TYPE_IGNITION_ON:
-                return "ignition_on";
+                return "ignitionon";
             case Event.TYPE_IGNITION_OFF:
-                return "ignition_off";
+                return "ignitionoff";
             case Event.TYPE_MAINTENANCE:
                 return "maintenance";
-            case Event.TYPE_DRIVER_CHANGED:
-                return "driver_changed";
-            case Event.TYPE_MEDIA:
-                return "media";
-            case Event.TYPE_PARKING_MODE_ON:
-                return "parking_mode_on";
-            case Event.TYPE_PARKING_MODE_OFF:
-                return "parking_mode_off";
             case Event.TYPE_PARKING_MODE_ALERT:
-                return "parking_mode_exit";
+                return "sos";
             default:
                 return "default";
         }
@@ -137,7 +130,7 @@ public class NotificatorFirebase extends Notificator {
             String soundName = getCustomSoundForEvent(event);
 
             var androidConfig = AndroidConfig.builder()
-                    .setNotification(AndroidNotification.builder().setSound(soundName).build());
+                    .setNotification(AndroidNotification.builder().setChannelId(soundName).build());
 
             var apnsConfig = ApnsConfig.builder()
                     .setAps(Aps.builder().setSound(soundName).build());
@@ -150,7 +143,9 @@ public class NotificatorFirebase extends Notificator {
             String body = message.digest();
 
             if (position != null) {
-                body = body + "\n" + position.getAddress();
+                if (position.getAddress() != null) {
+                    body = body + "\n" + position.getAddress();
+                }
             }
 
             var messageBuilder = MulticastMessage.builder()
@@ -168,7 +163,9 @@ public class NotificatorFirebase extends Notificator {
             }
 
             if (position != null) {
-                messageBuilder.putData("address", position.getAddress());
+                if (position.getAddress() != null) {
+                    messageBuilder.putData("address", position.getAddress());
+                }
                 messageBuilder.putData("latitude", String.valueOf(position.getLatitude()));
                 messageBuilder.putData("longitude", String.valueOf(position.getLongitude()));
                 messageBuilder.putData("speed", String.valueOf(position.getSpeed()));
@@ -197,9 +194,8 @@ public class NotificatorFirebase extends Notificator {
                     } else {
                         user.set("notificationTokens", String.join(",", registrationTokens));
                     }
-                    storage.updateObject(user, new Request(
-                            new Columns.Include("attributes"),
-                            new Condition.Equals("id", user.getId())));
+                    storage.updateObject(user,
+                            new Request(new Columns.Include("attributes"), new Condition.Equals("id", user.getId())));
                     cacheManager.invalidateObject(true, User.class, user.getId(), ObjectOperation.UPDATE);
                 }
             } catch (Exception e) {

@@ -20,6 +20,8 @@
     <entry key='processing.copyAttributes'>batteryLevel,charge,rssi,blocked,sat</entry>
 
     <entry key='geocoder.enable'>true</entry>
+    <entry key='geocoder.onRequest'>false</entry>
+    <entry key='geocoder.ignorePositions'>false</entry>
     <entry key='geocoder.type'>nominatim</entry>
     <entry key='geocoder.url'>https://eu1.locationiq.com/v1/reverse.php</entry>
 

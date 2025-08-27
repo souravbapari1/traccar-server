@@ -111,7 +111,6 @@ public class ProcessingHandler extends ChannelInboundHandlerAdapter implements B
                 EngineHoursHandler.class,
                 DriverHandler.class,
                 CopyAttributesHandler.class,
-                
                 PositionForwardingHandler.class,
                 DatabaseHandler.class)
                 .map((clazz) -> (BasePositionHandler) injector.getInstance(clazz))
@@ -125,12 +124,12 @@ public class ProcessingHandler extends ChannelInboundHandlerAdapter implements B
                 BehaviorEventHandler.class,
                 FuelEventHandler.class,
                 MotionEventHandler.class,
-                ParkingModeEventHandler.class,
                 GeofenceEventHandler.class,
                 AlarmEventHandler.class,
                 IgnitionEventHandler.class,
                 MaintenanceEventHandler.class,
-                DriverEventHandler.class)
+                DriverEventHandler.class,
+                ParkingModeEventHandler.class)
                 .map((clazz) -> (BaseEventHandler) injector.getInstance(clazz))
                 .filter(Objects::nonNull)
                 .toList();

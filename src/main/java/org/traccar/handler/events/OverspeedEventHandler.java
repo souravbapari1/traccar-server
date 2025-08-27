@@ -107,6 +107,7 @@ public class OverspeedEventHandler extends BaseEventHandler {
                 storage.updateObject(device, new Request(
                         new Columns.Include("overspeedState", "overspeedTime", "overspeedGeofenceId"),
                         new Condition.Equals("id", device.getId())));
+
             } catch (StorageException e) {
                 LOGGER.warn("Update device overspeed error", e);
             }

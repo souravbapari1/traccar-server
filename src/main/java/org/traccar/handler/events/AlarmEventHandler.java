@@ -52,6 +52,7 @@ public class AlarmEventHandler extends BaseEventHandler {
                     }
                 }
             }
+            
             for (String alarm : alarms) {
                 Event event = new Event(Event.TYPE_ALARM, position);
                 event.set(Position.KEY_ALARM, alarm);

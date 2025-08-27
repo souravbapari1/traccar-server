@@ -465,7 +465,7 @@ public final class Keys {
     public static final ConfigKey<Double> EVENT_PARKING_MODE_SPEED_THRESHOLD = new DoubleConfigKey(
             "event.parkingMode.speedThreshold",
             List.of(KeyType.CONFIG, KeyType.DEVICE),
-            0.5);
+            0.2);
 
     /**
      * Parking mode time threshold in milliseconds. Movement detection within this time after being parked

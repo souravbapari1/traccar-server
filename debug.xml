@@ -30,15 +30,17 @@
     <entry key='web.debug'>true</entry>
     <entry key='web.console'>true</entry>
 
-    <entry key='event.forward.header'>content-type: application/json</entry>
+    <!-- <entry key='event.forward.header'>content-type: application/json</entry>
     <entry key='forward.json'>true</entry>
-    <entry key='event.forward.url'>http://93.127.172.209:4040/traccar/event</entry>
+    <entry key='event.forward.url'>http://93.127.172.209:4040/traccar/event</entry> -->
 
-    <entry key='forward.enable'>true</entry>
+    <!-- <entry key='forward.enable'>true</entry>
     <entry key='forward.type'>json</entry>
     <entry key='forward.url'>http://93.127.172.209:4040/traccar</entry>
-
+     -->
     <entry key='geocoder.enable'>true</entry>
+    <entry key='geocoder.onRequest'>false</entry>
+    <entry key='geocoder.ignorePositions'>false</entry>
     <entry key='geocoder.type'>nominatim</entry>
     <entry key='geocoder.url'>https://eu1.locationiq.com/v1/reverse.php</entry>
 

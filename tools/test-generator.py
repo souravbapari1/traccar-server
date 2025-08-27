@@ -9,9 +9,9 @@ import random
 
 id = '123456789012345'
 server = 'localhost:5055'
-period = 1
-step = 0.001
-device_speed = 40
+period = 0.5
+step = 0.0003
+device_speed = 20
 driver_id = '123456'
 
 waypoints = [
@@ -43,6 +43,9 @@ def send(conn, lat, lon, altitude, course, speed, battery, alarm, ignition, accu
         params = params + (('ignition', 'true'),)
     else:
         params = params + (('ignition', 'false'),)
+        params = params + (('charge', 'true'),)
+        params = params + (('blocked', 'false'),)
+
     if accuracy:
         params = params + (('accuracy', accuracy),)
     if rpm:
